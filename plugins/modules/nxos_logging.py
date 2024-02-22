@@ -192,9 +192,9 @@ EXAMPLES = """
 - name: Configure logging using aggregate
   cisco.nxos.nxos_logging:
     aggregate:
-    - {dest: console, dest_level: 2}
-    - {dest: logfile, dest_level: 2, name: testfile}
-    - {facility: daemon, facility_level: 0}
+      - {dest: console, dest_level: 2}
+      - {dest: logfile, dest_level: 2, name: testfile}
+      - {facility: daemon, facility_level: 0}
     state: present
 """
 
@@ -218,7 +218,6 @@ from ansible_collections.cisco.nxos.plugins.module_utils.network.nxos.nxos impor
     get_config,
     load_config,
     normalize_interface,
-    nxos_argument_spec,
     read_module_context,
     run_commands,
     save_module_context,
@@ -894,8 +893,6 @@ def main():
         aggregate=dict(type="list", elements="dict"),
         purge=dict(default=False, type="bool"),
     )
-
-    argument_spec.update(nxos_argument_spec)
 
     required_if = [
         ("dest", "logfile", ["name"]),

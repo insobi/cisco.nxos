@@ -35,7 +35,6 @@ from ansible_collections.cisco.nxos.plugins.module_utils.network.nxos.nxos impor
 )
 from ansible_collections.cisco.nxos.plugins.module_utils.network.nxos.utils.utils import (
     normalize_interface,
-    remove_rsvd_interfaces,
     search_obj_in_list,
 )
 
@@ -80,11 +79,13 @@ class Interfaces(ConfigBase):
         """Wrapper method for `_connection.get()`
         This method exists solely to allow the unit test framework to mock device connection calls.
         """
-        return self._connection.get("show running-config all | incl 'system default switchport'")
+        return self._connection.get(
+            "show running-config all | incl 'system default switchport'",
+        )
 
     def edit_config(self, commands):
         """Wrapper method for `_connection.edit_config()`
-        This method exists solely to allow the unit test framework to mock device connection calls.
+        This method exists solely to allow the unit test framework to mcdock device connection calls.
         """
         return self._connection.edit_config(commands)
 
@@ -185,7 +186,9 @@ class Interfaces(ConfigBase):
         state = self._module.params["state"]
         if state in ("overridden", "merged", "replaced", "rendered") and not want:
             self._module.fail_json(
-                msg="value of config parameter must not be empty for state {0}".format(state),
+                msg="value of config parameter must not be empty for state {0}".format(
+                    state,
+                ),
             )
 
         commands = list()
@@ -356,7 +359,11 @@ class Interfaces(ConfigBase):
             or intf_def_enabled is None
         ):
             # L2-L3 is changing or this is a new virtual intf. Get new default.
-            intf_def_enabled = default_intf_enabled(name=name, sysdefs=sysdefs, mode=want_mode)
+            intf_def_enabled = default_intf_enabled(
+                name=name,
+                sysdefs=sysdefs,
+                mode=want_mode,
+            )
         return intf_def_enabled
 
     def del_attribs(self, obj):
@@ -427,8 +434,12 @@ class Interfaces(ConfigBase):
                 commands.append("shutdown")
             elif d["enabled"] is True and have_enabled is False:
                 commands.append("no shutdown")
-        if "mtu" in d:
-            commands.append("mtu " + str(d["mtu"]))
+        if "mtu" in d or ("switchport" in commands):
+            # changing mode to layer2 defaults the MTU
+            # we need re-apply existing (non-default) MTU
+            mtu = d.get("mtu") or obj_in_have.get("mtu")
+            if mtu:
+                commands.append("mtu " + str(mtu))
         if "ip_forward" in d:
             if d["ip_forward"] is True:
                 commands.append("ip forward")
@@ -459,13 +470,13 @@ class Interfaces(ConfigBase):
         and enabled/shutdown states. The default values for user-defined-default
         configurations may be different for legacy platforms.
         Notes:
-        - L3 enabled default state is False on N9K,N7K but True for N3K,N6K
+        - L3 enabled default state is False on N9K,N7K,N3K but True for N5K,N6K
         - Changing L2-L3 modes may change the default enabled value.
         - '(no) system default switchport shutdown' only applies to L2 interfaces.
         Run through the gathered interfaces and tag their default enabled state.
         """
         intf_defs = {}
-        L3_enabled = True if re.search("N[356]K", self.get_platform()) else False
+        L3_enabled = True if re.search("N[56]K", self.get_platform()) else False
         intf_defs = {
             "sysdefs": {
                 "mode": None,

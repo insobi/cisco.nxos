@@ -51,7 +51,7 @@ options:
           neighbor_address:
             description: IP/IPv6 address of the neighbor.
             type: str
-            required: True
+            required: true
           address_family:
             description: BGP Neighbor Address Family related configurations.
             type: list
@@ -61,7 +61,7 @@ options:
                 description: Address Family indicator.
                 type: str
                 choices: ["ipv4", "ipv6", "link-state", "vpnv4", "vpnv6", "l2vpn"]
-                required: True
+                required: true
               safi:
                 description: Sub Address Family indicator.
                 type: str
@@ -73,7 +73,7 @@ options:
                   route_map:
                     description: Route-map name.
                     type: str
-                    required: True
+                    required: true
                   exist_map:
                     description: Condition route-map to advertise only when prefix in condition exists.
                     type: str
@@ -185,6 +185,9 @@ options:
                     description: Apply policy to outgoing routes.
                     type: str
               rewrite_evpn_rt_asn:
+                description: Auto generate RTs for EBGP neighbor.
+                type: bool
+              rewrite_rt_asn:
                 description: Auto generate RTs for EBGP neighbor.
                 type: bool
               route_map:
@@ -304,9 +307,9 @@ EXAMPLES = """
               address_family:
                 - afi: ipv4
                   safi: unicast
-                  suppress_inactive: True
+                  suppress_inactive: true
                   next_hop_self:
-                    set: True
+                    set: true
             - neighbor_address: 203.0.113.2
               address_family:
                 - afi: ipv6
@@ -314,10 +317,10 @@ EXAMPLES = """
                 - afi: ipv4
                   safi: multicast
                   send_community:
-                    set: True
+                    set: true
 
-# Task output
-# -------------
+# Task output:
+# ------------
 #  before: {}
 #
 #  commands:
@@ -380,12 +383,12 @@ EXAMPLES = """
 #              - afi: ipv4
 #                safi: multicast
 #                send_community:
-#                  set: True
+#                  set: true
 #              - afi: ipv6
 #                safi: unicast
 
 # After state:
-# -------------
+# ------------
 # Nexus9000v# show running-config | section "^router bgp"
 # router bgp 65536
 #   neighbor 192.0.2.32
@@ -469,11 +472,11 @@ EXAMPLES = """
                 - afi: ipv4
                   safi: multicast
                   send_community:
-                    set: True
+                    set: true
     state: replaced
 
-# Task output
-# -------------
+# Task output:
+# ------------
 #  before:
 #    as_number: "65536"
 #    neighbors:
@@ -512,7 +515,7 @@ EXAMPLES = """
 #              - afi: ipv4
 #                safi: multicast
 #                send_community:
-#                  set: True
+#                  set: true
 #              - afi: ipv6
 #                safi: unicast
 #
@@ -559,12 +562,12 @@ EXAMPLES = """
 #              - afi: ipv4
 #                safi: multicast
 #                send_community:
-#                  set: True
+#                  set: true
 #              - afi: ipv6
 #                safi: unicast
 
 # After state:
-# -------------
+# ------------
 # Nexus9000v# show running-config | section "^router bgp"
 # router bgp 65536
 #   neighbor 192.0.2.32
@@ -626,13 +629,13 @@ EXAMPLES = """
               address_family:
                 - afi: ipv4
                   safi: unicast
-                  suppress_inactive: True
+                  suppress_inactive: true
                   next_hop_self:
-                    set: True
+                    set: true
     state: overridden
 
-# Task output
-# -------------
+# Task output:
+# ------------
 #  before:
 #    as_number: "65536"
 #    neighbors:
@@ -671,7 +674,7 @@ EXAMPLES = """
 #              - afi: ipv4
 #                safi: multicast
 #                send_community:
-#                  set: True
+#                  set: true
 #              - afi: ipv6
 #                safi: unicast
 #
@@ -705,12 +708,12 @@ EXAMPLES = """
 #            address_family:
 #              - afi: ipv4
 #                safi: unicast
-#                suppress_inactive: True
+#                suppress_inactive: true
 #                next_hop_self:
-#                  set: True
+#                  set: true
 
 # After state:
-# -------------
+# ------------
 # Nexus9000v# show running-config | section "^router bgp"
 # router bgp 65536
 #   neighbor 192.0.2.32
@@ -766,8 +769,8 @@ EXAMPLES = """
                   safi: unicast
     state: deleted
 
-# Task output
-# -------------
+# Task output:
+# ------------
 #  before:
 #    as_number: "65536"
 #    neighbors:
@@ -806,7 +809,7 @@ EXAMPLES = """
 #              - afi: ipv4
 #                safi: multicast
 #                send_community:
-#                  set: True
+#                  set: true
 #              - afi: ipv6
 #                safi: unicast
 #
@@ -847,10 +850,10 @@ EXAMPLES = """
 #              - afi: ipv4
 #                safi: multicast
 #                send_community:
-#                  set: True
+#                  set: true
 #
 # After state:
-# -------------
+# ------------
 # Nexus9000v# show running-config | section "^router bgp"
 # router bgp 65536
 #   neighbor 192.0.2.32
@@ -899,8 +902,8 @@ EXAMPLES = """
   cisco.nxos.nxos_bgp_neighbor_address_family:
     state: deleted
 
-# Task output
-# -------------
+# Task output:
+# ------------
 #  before:
 #    as_number: "65536"
 #    neighbors:
@@ -939,7 +942,7 @@ EXAMPLES = """
 #              - afi: ipv4
 #                safi: multicast
 #                send_community:
-#                  set: True
+#                  set: true
 #              - afi: ipv6
 #                safi: unicast
 #
@@ -961,7 +964,7 @@ EXAMPLES = """
 #    as_number: "65536"
 #
 # After state:
-# -------------
+# ------------
 # Nexus9000v# show running-config | section "^router bgp"
 # router bgp 65536
 #   neighbor 192.0.2.32
@@ -1005,9 +1008,9 @@ EXAMPLES = """
               address_family:
                 - afi: ipv4
                   safi: unicast
-                  suppress_inactive: True
+                  suppress_inactive: true
                   next_hop_self:
-                    set: True
+                    set: true
             - neighbor_address: 203.0.113.2
               address_family:
                 - afi: ipv6
@@ -1015,11 +1018,11 @@ EXAMPLES = """
                 - afi: ipv4
                   safi: multicast
                   send_community:
-                    set: True
+                    set: true
     state: rendered
 
-# Task Output (redacted)
-# -----------------------
+# Task output:
+# ------------
 #  rendered:
 #    - router bgp 65536
 #    - neighbor 192.0.2.32
@@ -1073,8 +1076,8 @@ EXAMPLES = """
     running_config: "{{ lookup('file', 'parsed.cfg') }}"
     state: parsed
 
-# Task output (redacted)
-# -----------------------
+# Task output:
+# ------------
 #  parsed:
 #    as_number: "65536"
 #    neighbors:
@@ -1113,9 +1116,55 @@ EXAMPLES = """
 #              - afi: ipv4
 #                safi: multicast
 #                send_community:
-#                  set: True
+#                  set: true
 #              - afi: ipv6
 #                safi: unicast
+"""
+RETURN = """
+before:
+  description: The configuration prior to the module execution.
+  returned: when I(state) is C(merged), C(replaced), C(overridden), C(deleted) or C(purged)
+  type: dict
+  sample: >
+    This output will always be in the same format as the
+    module argspec.
+after:
+  description: The resulting configuration after module execution.
+  returned: when changed
+  type: dict
+  sample: >
+    This output will always be in the same format as the
+    module argspec.
+commands:
+  description: The set of commands pushed to the remote device.
+  returned: when I(state) is C(merged), C(replaced), C(overridden), C(deleted) or C(purged)
+  type: list
+  sample:
+    - router bgp 65536
+    - neighbor 192.0.2.32
+    - address-family ipv4 unicast
+rendered:
+  description: The provided configuration in the task rendered in device-native format (offline).
+  returned: when I(state) is C(rendered)
+  type: list
+  sample:
+    - router bgp 65536
+    - neighbor 192.0.2.32
+    - address-family ipv4 unicast
+gathered:
+  description: Facts about the network resource gathered from the remote device as structured data.
+  returned: when I(state) is C(gathered)
+  type: dict
+  sample: >
+    This output will always be in the same format as the
+    module argspec.
+parsed:
+  description: The device native config provided in I(running_config) option parsed into structured data as per module argspec.
+  returned: when I(state) is C(parsed)
+  type: dict
+  sample: >
+    This output will always be in the same format as the
+    module argspec.
 """
 
 from ansible.module_utils.basic import AnsibleModule

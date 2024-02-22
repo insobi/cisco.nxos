@@ -17,7 +17,7 @@ the given network resource.
 
 import re
 
-from ansible_collections.ansible.netcommon.plugins.module_utils.network.common.network_template import (
+from ansible_collections.ansible.netcommon.plugins.module_utils.network.common.rm_base.network_template import (
     NetworkTemplate,
 )
 
@@ -59,6 +59,7 @@ class Bgp_neighbor_address_familyTemplate(NetworkTemplate):
                 r"""
                 (vrf\s(?P<vrf>\S+))?
                 \s*neighbor\s(?P<neighbor>\S+)
+                (\sremote-as\s\S+)?
                 \saddress-family
                 \s(?P<afi>\S+)
                 (\s(?P<safi>\S+))?
@@ -607,6 +608,32 @@ class Bgp_neighbor_address_familyTemplate(NetworkTemplate):
                                 "address_family": {
                                     '{{ afi + "_" + safi|d() }}': {
                                         "rewrite_evpn_rt_asn": "{{ not not rewrite_evpn_rt_asn }}",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        {
+            "name": "rewrite_rt_asn",
+            "getval": re.compile(
+                r"""
+                (?P<rewrite_rt_asn>rewrite-rt-asn)
+                $""",
+                re.VERBOSE,
+            ),
+            "setval": "rewrite-rt-asn",
+            "result": {
+                "vrfs": {
+                    "{{ 'vrf_' + vrf|d() }}": {
+                        "vrf": "{{ vrf }}",
+                        "neighbors": {
+                            "{{ neighbor }}": {
+                                "address_family": {
+                                    '{{ afi + "_" + safi|d() }}': {
+                                        "rewrite_rt_asn": "{{ not not rewrite_rt_asn }}",
                                     },
                                 },
                             },

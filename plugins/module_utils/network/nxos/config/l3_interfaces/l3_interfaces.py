@@ -30,9 +30,7 @@ from ansible_collections.ansible.netcommon.plugins.module_utils.network.common.u
 
 from ansible_collections.cisco.nxos.plugins.module_utils.network.nxos.facts.facts import Facts
 from ansible_collections.cisco.nxos.plugins.module_utils.network.nxos.utils.utils import (
-    get_interface_type,
     normalize_interface,
-    remove_rsvd_interfaces,
     search_obj_in_list,
 )
 
@@ -202,7 +200,6 @@ class L3_interfaces(ConfigBase):
             cmds.extend(self.generate_delete_commands(rmv))
         else:
             diff = want
-
         cmds.extend(self.add_commands(diff, name=name))
         cmds.extend(v4_cmds)
         cmds.extend(v6_cmds)
@@ -313,7 +310,7 @@ class L3_interfaces(ConfigBase):
             if diff:
                 addr = diff.get("address") or pri_w.get("address")
                 cmd = "ip address %s" % addr
-                tag = diff.get("tag")
+                tag = diff.get("tag") or pri_w.get("tag")
                 cmd += " tag %s" % tag if tag else ""
                 cmds.append(cmd)
 
@@ -406,6 +403,14 @@ class L3_interfaces(ConfigBase):
                 # device auto-enables redirects when secondaries are removed;
                 # auto-enable may fail on legacy platforms so always do explicit enable
                 commands.append("ip redirects")
+        if "ipv6_redirects" in obj:
+            if not self.check_existing(name, "has_secondary") or re.match(
+                "N[35679]",
+                self.platform,
+            ):
+                # device auto-enables redirects when secondaries are removed;
+                # auto-enable may fail on legacy platforms so always do explicit enable
+                commands.append("ipv6 redirects")
         if "unreachables" in obj:
             commands.append("no ip unreachables")
         if "ipv4" in obj:
@@ -473,6 +478,12 @@ class L3_interfaces(ConfigBase):
                 no_cmd = "no " if diff["redirects"] is False else ""
                 commands.append(no_cmd + "ip redirects")
                 self.cmd_order_fixup(commands, name)
+        if "ipv6_redirects" in diff:
+            # Note: device will auto-disable redirects when secondaries are present
+            if diff["ipv6_redirects"] != self.check_existing(name, "ipv6_redirects"):
+                no_cmd = "no " if diff["ipv6_redirects"] is False else ""
+                commands.append(no_cmd + "ipv6 redirects")
+                self.cmd_order_fixup(commands, name)
         if "unreachables" in diff:
             if diff["unreachables"] != self.check_existing(name, "unreachables"):
                 no_cmd = "no " if diff["unreachables"] is False else ""
@@ -525,7 +536,7 @@ class L3_interfaces(ConfigBase):
             if name and not [item for item in cmds if item.startswith("interface")]:
                 cmds.insert(0, "interface " + name)
 
-            redirects = [item for item in cmds if re.match("(no )*ip redirects", item)]
+            redirects = [item for item in cmds if re.match("(no )*ip(v6)* redirects", item)]
             if redirects:
                 # redirects should occur after ipv4 commands, just move to end of list
                 redirects = redirects.pop()

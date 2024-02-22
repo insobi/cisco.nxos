@@ -114,7 +114,6 @@ EXAMPLES = """
     tacacs_port: 89
     host_timeout: 10
     address: 5.6.7.8
-
 """
 
 RETURN = """
@@ -154,7 +153,6 @@ from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.cisco.nxos.plugins.module_utils.network.nxos.nxos import (
     get_capabilities,
     load_config,
-    nxos_argument_spec,
     run_commands,
 )
 
@@ -281,8 +279,6 @@ def main():
         state=dict(choices=["absent", "present"], default="present"),
     )
 
-    argument_spec.update(nxos_argument_spec)
-
     module = AnsibleModule(argument_spec=argument_spec, supports_check_mode=True)
 
     warnings = list()
@@ -318,7 +314,9 @@ def main():
         module.fail_json(msg="tacacs_port can only be used with server_type=tacacs")
 
     if (auth_port or acct_port) and server_type != "radius":
-        module.fail_json(msg="auth_port and acct_port can only be used" "when server_type=radius")
+        module.fail_json(
+            msg="auth_port and acct_port can only be used" "when server_type=radius",
+        )
 
     existing = get_aaa_host_info(module, server_type, address)
     end_state = existing

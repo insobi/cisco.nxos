@@ -234,8 +234,6 @@ from ansible_collections.ansible.netcommon.plugins.module_utils.network.common.n
     get_resource_connection,
 )
 
-from ansible_collections.cisco.nxos.plugins.module_utils.network.nxos.nxos import nxos_argument_spec
-
 
 class FileCopy:
     def __init__(self, module):
@@ -313,8 +311,11 @@ class FilePush(FileCopy):
             self._module.fail_json("Could not transfer file. Not enough space on device.")
 
         # frp = full_remote_path, flp = full_local_path
-        frp = "{0}{1}".format(file_system, remote_file)
+        frp = remote_file
+        if not file_system.startswith("bootflash:"):
+            frp = "{0}{1}".format(file_system, remote_file)
         flp = os.path.join(os.path.abspath(local_file))
+
         try:
             self._connection.copy_file(
                 source=flp,
@@ -470,8 +471,6 @@ def main():
         remote_scp_server_user=dict(type="str"),
         remote_scp_server_password=dict(no_log=True),
     )
-
-    argument_spec.update(nxos_argument_spec)
 
     module = AnsibleModule(
         argument_spec=argument_spec,

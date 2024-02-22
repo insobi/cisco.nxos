@@ -125,7 +125,7 @@ options:
       playbook root directory or role root directory, if playbook is part of an ansible
       role. If the directory does not exist, it is created.
     type: bool
-    default: no
+    default: false
   running_config:
     description:
     - The module, by default, will connect to the remote device and retrieve the current
@@ -146,7 +146,7 @@ options:
       the running-config is append with the all keyword.  When the value is set to
       false, the command is issued without the all keyword
     type: bool
-    default: no
+    default: false
   save_when:
     description:
     - When changes are made to the device running-configuration, the changes are not
@@ -246,21 +246,21 @@ EXAMPLES = """
 
 - cisco.nxos.nxos_config:
     lines:
-    - 10 permit ip 192.0.2.1/32 any log
-    - 20 permit ip 192.0.2.2/32 any log
-    - 30 permit ip 192.0.2.3/32 any log
-    - 40 permit ip 192.0.2.4/32 any log
-    - 50 permit ip 192.0.2.5/32 any log
+      - 10 permit ip 192.0.2.1/32 any log
+      - 20 permit ip 192.0.2.2/32 any log
+      - 30 permit ip 192.0.2.3/32 any log
+      - 40 permit ip 192.0.2.4/32 any log
+      - 50 permit ip 192.0.2.5/32 any log
     parents: ip access-list test
     before: no ip access-list test
     match: exact
 
 - cisco.nxos.nxos_config:
     lines:
-    - 10 permit ip 192.0.2.1/32 any log
-    - 20 permit ip 192.0.2.2/32 any log
-    - 30 permit ip 192.0.2.3/32 any log
-    - 40 permit ip 192.0.2.4/32 any log
+      - 10 permit ip 192.0.2.1/32 any log
+      - 20 permit ip 192.0.2.2/32 any log
+      - 30 permit ip 192.0.2.3/32 any log
+      - 40 permit ip 192.0.2.4/32 any log
     parents: ip access-list test
     before: no ip access-list test
     replace: block
@@ -274,13 +274,13 @@ EXAMPLES = """
   cisco.nxos.nxos_config:
     lines:
       # - shut
-    - shutdown
+      - shutdown
     # parents: int eth1/1
     parents: interface Ethernet1/1
 
 - name: configurable backup path
   cisco.nxos.nxos_config:
-    backup: yes
+    backup: true
     backup_options:
       filename: backup.cfg
       dir_path: /home/user
@@ -336,7 +336,6 @@ from ansible_collections.cisco.nxos.plugins.module_utils.network.nxos.nxos impor
     get_config,
     get_connection,
     load_config,
-    nxos_argument_spec,
     run_commands,
 )
 
@@ -408,19 +407,20 @@ def main():
         defaults=dict(type="bool", default=False),
         backup=dict(type="bool", default=False),
         backup_options=dict(type="dict", options=backup_spec),
-        save_when=dict(choices=["always", "never", "modified", "changed"], default="never"),
+        save_when=dict(
+            choices=["always", "never", "modified", "changed"],
+            default="never",
+        ),
         diff_against=dict(choices=["running", "startup", "intended"]),
         diff_ignore_lines=dict(type="list", elements="str"),
     )
 
-    argument_spec.update(nxos_argument_spec)
-
     mutually_exclusive = [("lines", "src", "replace_src"), ("parents", "src")]
 
     required_if = [
-        ("match", "strict", ["lines"]),
-        ("match", "exact", ["lines"]),
-        ("replace", "block", ["lines"]),
+        ("match", "strict", ["lines", "src"], True),
+        ("match", "exact", ["lines", "src"], True),
+        ("replace", "block", ["lines", "src"], True),
         ("replace", "config", ["replace_src"]),
         ("diff_against", "intended", ["intended_config"]),
     ]
@@ -505,10 +505,21 @@ def main():
     if module.params["save_when"] == "always":
         save_config(module, result)
     elif module.params["save_when"] == "modified":
-        output = execute_show_commands(module, ["show running-config", "show startup-config"])
+        output = execute_show_commands(
+            module,
+            ["show running-config", "show startup-config"],
+        )
 
-        running_config = NetworkConfig(indent=2, contents=output[0], ignore_lines=diff_ignore_lines)
-        startup_config = NetworkConfig(indent=2, contents=output[1], ignore_lines=diff_ignore_lines)
+        running_config = NetworkConfig(
+            indent=2,
+            contents=output[0],
+            ignore_lines=diff_ignore_lines,
+        )
+        startup_config = NetworkConfig(
+            indent=2,
+            contents=output[1],
+            ignore_lines=diff_ignore_lines,
+        )
 
         if running_config.sha1 != startup_config.sha1:
             save_config(module, result)
@@ -523,11 +534,17 @@ def main():
             contents = running_config
 
         # recreate the object in order to process diff_ignore_lines
-        running_config = NetworkConfig(indent=2, contents=contents, ignore_lines=diff_ignore_lines)
+        running_config = NetworkConfig(
+            indent=2,
+            contents=contents,
+            ignore_lines=diff_ignore_lines,
+        )
 
         if module.params["diff_against"] == "running":
             if module.check_mode:
-                module.warn("unable to perform diff against running-config due to check mode")
+                module.warn(
+                    "unable to perform diff against running-config due to check mode",
+                )
                 contents = None
             else:
                 contents = config.config_text
@@ -543,9 +560,15 @@ def main():
             contents = module.params["intended_config"]
 
         if contents is not None:
-            base_config = NetworkConfig(indent=2, contents=contents, ignore_lines=diff_ignore_lines)
+            base_config = NetworkConfig(
+                indent=2,
+                contents=contents,
+                ignore_lines=diff_ignore_lines,
+            )
 
             if running_config.sha1 != base_config.sha1:
+                before = ""
+                after = ""
                 if module.params["diff_against"] == "intended":
                     before = running_config
                     after = base_config

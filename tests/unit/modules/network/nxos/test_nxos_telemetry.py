@@ -28,11 +28,7 @@ from textwrap import dedent
 # shippable, which fails this test due to import yaml & import ordereddict.
 import pytest
 
-from ansible_collections.cisco.nxos.plugins.module_utils.network.nxos.config.telemetry.telemetry import (
-    Telemetry,
-)
 from ansible_collections.cisco.nxos.plugins.module_utils.network.nxos.nxos import (
-    NxosCmdRef,
     nxosCmdRef_import_check,
 )
 from ansible_collections.cisco.nxos.plugins.modules import nxos_telemetry
@@ -48,7 +44,6 @@ ignore_provider_arg = True
 
 @pytest.mark.skipif(len(msg), reason=msg)
 class TestNxosTelemetryModule(TestNxosModule):
-
     module = nxos_telemetry
 
     def setUp(self):
@@ -1799,6 +1794,123 @@ class TestNxosTelemetryModule(TestNxosModule):
 
         result = self.execute_module(changed=False)
         self.assertEqual(result["gathered"], gathered)
+
+    def test_tms_names(self):
+        # TMS input with strings
+        self.execute_show_command.return_value = ""
+        self.get_platform_shortname.return_value = "N9K"
+        set_module_args(
+            dict(
+                config=dict(
+                    destination_groups=[
+                        dict(
+                            id="collector",
+                            destination=dict(
+                                ip="192.168.1.100",
+                                port=50051,
+                                protocol="gRPC",
+                                encoding="GPB",
+                            ),
+                        ),
+                    ],
+                    sensor_groups=[
+                        dict(
+                            id="dme_bgp",
+                            data_source="DME",
+                            path=dict(
+                                name="sys/bd",
+                                depth="unbounded",
+                            ),
+                        ),
+                    ],
+                    subscriptions=[
+                        dict(
+                            id="collector_sub",
+                            destination_group="collector",
+                            sensor_group=dict(
+                                id="dme_bgp",
+                                sample_interval=1000,
+                            ),
+                        ),
+                    ],
+                ),
+                state="merged",
+            ),
+            ignore_provider_arg,
+        )
+        self.execute_module(
+            changed=True,
+            commands=[
+                "feature telemetry",
+                "telemetry",
+                "destination-group collector",
+                "ip address 192.168.1.100 port 50051 protocol grpc encoding gpb",
+                "sensor-group dme_bgp",
+                "data-source DME",
+                "path sys/bd depth unbounded",
+                "subscription collector_sub",
+                "dst-grp collector",
+                "snsr-grp dme_bgp sample-interval 1000",
+            ],
+        )
+
+    def test_tms_names_idempotent(self):
+        # TMS input with strings
+        self.execute_show_command.return_value = dedent(
+            """\
+            feature telemetry
+            telemetry
+              destination-group collector
+                ip address 192.168.1.100 port 50051 protocol grpc encoding gpb
+              sensor-group dme_bgp
+                data-source DME
+                path sys/bd depth unbounded
+              subscription collector_sub
+                dst-grp collector
+                snsr-grp dme_bgp sample-interval 1000
+            """,
+        )
+        self.get_platform_shortname.return_value = "N9K"
+        set_module_args(
+            dict(
+                config=dict(
+                    destination_groups=[
+                        dict(
+                            id="collector",
+                            destination=dict(
+                                ip="192.168.1.100",
+                                port=50051,
+                                protocol="gRPC",
+                                encoding="GPB",
+                            ),
+                        ),
+                    ],
+                    sensor_groups=[
+                        dict(
+                            id="dme_bgp",
+                            data_source="DME",
+                            path=dict(
+                                name="sys/bd",
+                                depth="unbounded",
+                            ),
+                        ),
+                    ],
+                    subscriptions=[
+                        dict(
+                            id="collector_sub",
+                            destination_group="collector",
+                            sensor_group=dict(
+                                id="dme_bgp",
+                                sample_interval=1000,
+                            ),
+                        ),
+                    ],
+                ),
+                state="merged",
+            ),
+            ignore_provider_arg,
+        )
+        self.execute_module(changed=False, commands=[])
 
 
 def build_args(data, type, state=None, check_mode=None):

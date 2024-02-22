@@ -18,10 +18,8 @@ necessary to bring the current configuration to its desired end-state is
 created.
 """
 
-from copy import deepcopy
-
 from ansible.module_utils.six import iteritems
-from ansible_collections.ansible.netcommon.plugins.module_utils.network.common.resource_module import (
+from ansible_collections.ansible.netcommon.plugins.module_utils.network.common.rm_base.resource_module import (
     ResourceModule,
 )
 from ansible_collections.ansible.netcommon.plugins.module_utils.network.common.utils import (
@@ -236,7 +234,7 @@ class Bgp_global(ResourceModule):
             self.compare(parsers=nbr_parsers, want=entry, have=have_nbr)
             self._compare_path_attribute(entry, have_nbr)
 
-            if len(self.commands) != begin:
+            if len(self.commands) != begin or (entry and not have_nbr):
                 self.commands.insert(begin, self._tmplt.render(entry, "neighbor_address", False))
 
         # cleanup remaining neighbors

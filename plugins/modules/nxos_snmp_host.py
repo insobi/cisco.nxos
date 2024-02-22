@@ -129,7 +129,6 @@ from ansible.module_utils.basic import AnsibleModule
 
 from ansible_collections.cisco.nxos.plugins.module_utils.network.nxos.nxos import (
     load_config,
-    nxos_argument_spec,
     run_commands,
 )
 
@@ -249,7 +248,7 @@ def get_snmp_host(host, udp, module):
 
         if find:
             fix_find = {}
-            for (key, value) in find.items():
+            for key, value in find.items():
                 if isinstance(value, str):
                     fix_find[key] = value.strip()
                 else:
@@ -265,21 +264,27 @@ def remove_snmp_host(host, udp, existing):
         existing["version"] = "3"
         command = "no snmp-server host {0} {snmp_type} version \
                     {version} {v3} {community} udp-port {1}".format(
-            host, udp, **existing
+            host,
+            udp,
+            **existing,
         )
 
     elif existing["version"] == "v2c":
         existing["version"] = "2c"
         command = "no snmp-server host {0} {snmp_type} version \
                     {version} {community} udp-port {1}".format(
-            host, udp, **existing
+            host,
+            udp,
+            **existing,
         )
 
     elif existing["version"] == "v1":
         existing["version"] = "1"
         command = "no snmp-server host {0} {snmp_type} version \
                     {version} {community} udp-port {1}".format(
-            host, udp, **existing
+            host,
+            udp,
+            **existing,
         )
 
     if command:
@@ -401,8 +406,6 @@ def main():
         snmp_type=dict(choices=["trap", "inform"]),
         state=dict(choices=["absent", "present"], default="present"),
     )
-
-    argument_spec.update(nxos_argument_spec)
 
     module = AnsibleModule(argument_spec=argument_spec, supports_check_mode=True)
 

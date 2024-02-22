@@ -35,9 +35,6 @@ from ansible_collections.cisco.nxos.tests.unit.modules.utils import (
 
 
 def set_module_args(args, ignore_provider=None):
-    if "provider" not in args and not ignore_provider:
-        args["provider"] = {"transport": args.get("transport") or "cli"}
-
     return _set_module_args(args)
 
 
@@ -92,7 +89,6 @@ class TestNxosModule(ModuleTestCase):
         return retvals
 
     def execute_module(self, failed=False, changed=False, commands=None, sort=True, device=""):
-
         self.load_fixtures(commands, device=device)
 
         if failed:

@@ -18,10 +18,8 @@ necessary to bring the current configuration to its desired end-state is
 created.
 """
 
-from copy import deepcopy
-
 from ansible.module_utils.six import iteritems
-from ansible_collections.ansible.netcommon.plugins.module_utils.network.common.resource_module import (
+from ansible_collections.ansible.netcommon.plugins.module_utils.network.common.rm_base.resource_module import (
     ResourceModule,
 )
 from ansible_collections.ansible.netcommon.plugins.module_utils.network.common.utils import (
@@ -72,6 +70,9 @@ class Route_maps(ResourceModule):
             "set.path_selection",
             "set.tag",
             "set.weight",
+            "set.ip.next_hop.peer_address",
+            "set.ip.next_hop.redist_unchanged",
+            "set.ip.next_hop.unchanged",
         ]
         self.complex_parsers = [
             "match.as_number.asn",
@@ -101,6 +102,8 @@ class Route_maps(ResourceModule):
             "set.distance",
             "set.evpn.gateway_ip",
             "set.community",
+            "set.ip.next_hop",
+            "set.ip.next_hop.verify_availability",
         ]
 
     def execute_module(self):
@@ -156,18 +159,74 @@ class Route_maps(ResourceModule):
             begin = len(self.commands)
 
             self._compare_lists(wentry, hentry)
+            self._compare_extcomm(wentry, hentry)
             self.compare(parsers=self.linear_parsers, want=wentry, have=hentry)
 
             if len(self.commands) != begin:
+                # all 'no ' commands must be executed first to avoid NXOS command incompatibility errors
+                pos = begin
+                for i in range(begin, len(self.commands)):
+                    if self.commands[i][0:3] == "no ":
+                        self.commands.insert(pos, self.commands.pop(i))
+                        pos += 1
                 self.commands.insert(begin, self._tmplt.render(wentry, "route_map", False))
         # remove superfluos entries from have
         for _hk, hentry in iteritems(have):
             self.commands.append(self._tmplt.render(hentry, "route_map", True))
 
+    def _compare_extcomm(self, want, have):
+        hentry = get_from_dict(data_dict=have, keypath="set.extcommunity.rt") or {}
+        wentry = get_from_dict(data_dict=want, keypath="set.extcommunity.rt") or {}
+
+        h_nums = set(hentry.get("extcommunity_numbers", []))
+        w_nums = set(wentry.get("extcommunity_numbers", []))
+
+        if h_nums != w_nums or wentry.get("additive") != hentry.get("additive"):
+            if self.state not in ["merged", "rendered"]:
+                # need to explicitly remove existing entry to correctly apply new one
+                self.commands.append(self._tmplt.render(hentry, "set.extcommunity.rt", negate=True))
+            # default CLI behaviour is to 'merge' with existing entry
+            self.commands.append(self._tmplt.render(wentry, "set.extcommunity.rt", negate=False))
+
     def _compare_lists(self, want, have):
         for x in self.complex_parsers:
             wx = get_from_dict(want, x) or []
             hx = get_from_dict(have, x) or []
+
+            if x == "set.ip.next_hop.verify_availability":
+                w_set = {}
+                for i in range(0, len(wx)):
+                    w_set[wx[i]["address"]] = wx[i]
+                h_set = {}
+                for i in range(0, len(hx)):
+                    h_set[hx[i]["address"]] = hx[i]
+                sum_set = list(set(list(w_set) + list(h_set)))
+                for each in sum_set:
+                    if each in w_set and each in h_set and w_set[each] == h_set[each]:
+                        for i in range(
+                            0,
+                            len(want["set"]["ip"]["next_hop"]["verify_availability"]),
+                        ):
+                            if (
+                                want["set"]["ip"]["next_hop"]["verify_availability"][i]["address"]
+                                == each
+                            ):
+                                want["set"]["ip"]["next_hop"]["verify_availability"].pop(i)
+                                break
+                        for i in range(
+                            0,
+                            len(have["set"]["ip"]["next_hop"]["verify_availability"]),
+                        ):
+                            if (
+                                have["set"]["ip"]["next_hop"]["verify_availability"][i]["address"]
+                                == each
+                            ):
+                                have["set"]["ip"]["next_hop"]["verify_availability"].pop(i)
+                                break
+                        w_set.pop(each)
+                        h_set.pop(each)
+                wx = w_set
+                hx = h_set
 
             if isinstance(wx, list):
                 wx = set(wx)

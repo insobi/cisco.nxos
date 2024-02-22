@@ -29,16 +29,14 @@ from ansible_collections.cisco.nxos.plugins.module_utils.network.nxos.config.l3_
 )
 from ansible_collections.cisco.nxos.plugins.modules import nxos_l3_interfaces
 from ansible_collections.cisco.nxos.tests.unit.compat.mock import PropertyMock, patch
-from ansible_collections.cisco.nxos.tests.unit.modules.utils import AnsibleFailJson
 
-from .nxos_module import TestNxosModule, load_fixture, set_module_args
+from .nxos_module import TestNxosModule, set_module_args
 
 
 ignore_provider_arg = True
 
 
 class TestNxosL3InterfacesModule(TestNxosModule):
-
     module = nxos_l3_interfaces
 
     def setUp(self):
@@ -106,6 +104,9 @@ class TestNxosL3InterfacesModule(TestNxosModule):
             ip address 10.1.2.1/24
           interface Ethernet1/3
             ip address 10.1.3.1/24
+          interface port-channel336
+          interface port-channel337
+            no ipv6 redirects
         """,
         )
         self.get_resource_connection_facts.return_value = {self.SHOW_CMD: existing}
@@ -114,12 +115,22 @@ class TestNxosL3InterfacesModule(TestNxosModule):
                 dict(name="mgmt0", ipv4=[{"address": "10.0.0.254/24"}]),
                 dict(name="Ethernet1/1", ipv4=[{"address": "192.168.1.1/24"}]),
                 dict(name="Ethernet1/2"),
+                dict(name="port-channel355", ipv6_redirects=False),
+                dict(name="port-channel336", ipv6_redirects=False, ipv6=[{"address": "10::5/128"}]),
                 # Eth1/3 not present! Thus overridden should set Eth1/3 to defaults;
                 # replaced should ignore Eth1/3.
             ],
         )
         # Expected result commands for each 'state'
-        merged = ["interface Ethernet1/1", "ip address 192.168.1.1/24"]
+        merged = [
+            "interface Ethernet1/1",
+            "ip address 192.168.1.1/24",
+            "interface port-channel355",
+            "no ipv6 redirects",
+            "interface port-channel336",
+            "ipv6 address 10::5/128",
+            "no ipv6 redirects",
+        ]
         deleted = [
             "interface mgmt0",
             "no ip address",
@@ -133,6 +144,11 @@ class TestNxosL3InterfacesModule(TestNxosModule):
             "ip address 192.168.1.1/24",
             "interface Ethernet1/2",
             "no ip address",
+            "interface port-channel355",
+            "no ipv6 redirects",
+            "interface port-channel336",
+            "ipv6 address 10::5/128",
+            "no ipv6 redirects",
         ]
         overridden = [
             "interface Ethernet1/1",
@@ -141,6 +157,13 @@ class TestNxosL3InterfacesModule(TestNxosModule):
             "no ip address",
             "interface Ethernet1/3",
             "no ip address",
+            "interface port-channel355",
+            "no ipv6 redirects",
+            "interface port-channel336",
+            "ipv6 address 10::5/128",
+            "no ipv6 redirects",
+            "interface port-channel337",
+            "ipv6 redirects",
         ]
 
         playbook["state"] = "merged"
@@ -998,3 +1021,26 @@ class TestNxosL3InterfacesModule(TestNxosModule):
         set_module_args(playbook, ignore_provider_arg)
         result = self.execute_module(changed=False)
         self.assertEqual(result["gathered"], gathered_facts)
+
+    def test_replaced_tag(self):
+        existing = dedent(
+            """\
+          interface Vlan10
+            ip address 192.168.1.10/24 tag 20
+        """,
+        )
+        self.get_resource_connection_facts.return_value = {self.SHOW_CMD: existing}
+        playbook = dict(
+            config=[
+                dict(
+                    name="Vlan10",
+                    ipv4=[{"address": "192.168.1.11/24", "tag": 20}],
+                ),
+            ],
+            state="replaced",
+        )
+
+        commands = ["interface Vlan10", "ip address 192.168.1.11/24 tag 20"]
+        playbook["state"] = "replaced"
+        set_module_args(playbook, ignore_provider_arg)
+        self.execute_module(changed=True, commands=commands)

@@ -45,6 +45,10 @@ options:
     - exec
     - motd
     type: str
+  multiline_delimiter:
+    description: Specify the delimiting character than will be used for configuration.
+    default: "@"
+    type: str
   text:
     description:
     - The banner text that should be present in the remote device running configuration.
@@ -102,7 +106,6 @@ from ansible.module_utils.basic import AnsibleModule
 
 from ansible_collections.cisco.nxos.plugins.module_utils.network.nxos.nxos import (
     load_config,
-    nxos_argument_spec,
     run_commands,
 )
 
@@ -127,9 +130,11 @@ def map_obj_to_commands(want, have, module):
             commands.append("no banner %s" % module.params["banner"])
 
     elif state == "present" and want.get("text") != have.get("text"):
-        banner_cmd = "banner %s @\n%s\n@" % (
+        banner_cmd = "banner %s %s\n%s\n%s" % (
             module.params["banner"],
+            module.params["multiline_delimiter"],
             want["text"],
+            module.params["multiline_delimiter"],
         )
         commands.append(banner_cmd)
 
@@ -182,10 +187,9 @@ def main():
     argument_spec = dict(
         banner=dict(required=True, choices=["exec", "motd"]),
         text=dict(),
+        multiline_delimiter=dict(default="@"),
         state=dict(default="present", choices=["present", "absent"]),
     )
-
-    argument_spec.update(nxos_argument_spec)
 
     required_if = [("state", "present", ("text",))]
 

@@ -78,7 +78,7 @@ options:
 
 EXAMPLES = """
 - name: Install OS on N9k
-  check_mode: no
+  check_mode: false
   cisco.nxos.nxos_install_os:
     system_image_file: nxos.7.0.3.I6.1.bin
     issu: desired
@@ -94,11 +94,11 @@ EXAMPLES = """
 - name: Check installed OS for newly installed version
   nxos_command:
     commands: [show version | json]
-    provider: '{{ connection }}'
   register: output
+
 - assert:
     that:
-    - output['stdout'][0]['kickstart_ver_str'] == '7.0(3)I6(1)'
+      - output['stdout'][0]['kickstart_ver_str'] == '7.0(3)I6(1)'
 """
 
 RETURN = """
@@ -130,7 +130,6 @@ from ansible.module_utils.basic import AnsibleModule
 
 from ansible_collections.cisco.nxos.plugins.module_utils.network.nxos.nxos import (
     load_config,
-    nxos_argument_spec,
     run_commands,
 )
 
@@ -392,7 +391,9 @@ def build_install_cmd_set(issu, image, kick, type, force=True):
     if kick is None:
         commands.append("%s nxos %s %s" % (rootcmd, image, issu_cmd))
     else:
-        commands.append("%s %s system %s kickstart %s" % (rootcmd, issu_cmd, image, kick))
+        commands.append(
+            "%s %s system %s kickstart %s" % (rootcmd, issu_cmd, image, kick),
+        )
 
     return commands
 
@@ -564,8 +565,6 @@ def main():
         kickstart_image_file=dict(required=False),
         issu=dict(choices=["required", "desired", "no", "yes"], default="no"),
     )
-
-    argument_spec.update(nxos_argument_spec)
 
     module = AnsibleModule(argument_spec=argument_spec, supports_check_mode=True)
 

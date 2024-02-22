@@ -92,7 +92,7 @@ options:
     description:
     - Specify to locally store a new created snapshot, to be used when C(action=create).
     type: bool
-    default: no
+    default: false
   path:
     description:
     - Specify the path of the file where new created snapshot or snapshots comparison
@@ -152,7 +152,6 @@ from ansible.module_utils.basic import AnsibleModule
 
 from ansible_collections.cisco.nxos.plugins.module_utils.network.nxos.nxos import (
     load_config,
-    nxos_argument_spec,
     run_commands,
 )
 
@@ -344,8 +343,6 @@ def main():
         save_snapshot_locally=dict(type="bool", default=False),
         path=dict(type="str", default="./"),
     )
-
-    argument_spec.update(nxos_argument_spec)
 
     required_if = [
         (

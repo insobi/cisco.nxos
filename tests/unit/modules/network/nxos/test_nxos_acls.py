@@ -11,14 +11,13 @@ __metaclass__ = type
 from textwrap import dedent
 
 from ansible_collections.cisco.nxos.plugins.modules import nxos_acls
-from ansible_collections.cisco.nxos.tests.unit.compat.mock import MagicMock, patch
+from ansible_collections.cisco.nxos.tests.unit.compat.mock import patch
 from ansible_collections.cisco.nxos.tests.unit.modules.utils import set_module_args
 
 from .nxos_module import TestNxosModule
 
 
 class TestNxosAclsModule(TestNxosModule):
-
     module = nxos_acls
 
     def setUp(self):
@@ -106,7 +105,9 @@ class TestNxosAclsModule(TestNxosModule):
                                         source=dict(prefix="2002:1:1:1::/64"),
                                         sequence=30,
                                         protocol="icmp",
-                                        protocol_options=dict(icmp=dict(echo_request=True)),
+                                        protocol_options=dict(
+                                            icmp=dict(echo_request=True),
+                                        ),
                                     ),
                                 ],
                             ),
@@ -422,7 +423,11 @@ class TestNxosAclsModule(TestNxosModule):
             "10 permit sctp any any",
         ]
         result = self.execute_module(changed=False)
-        self.assertEqual(sorted(result["rendered"]), sorted(commands), result["rendered"])
+        self.assertEqual(
+            sorted(result["rendered"]),
+            sorted(commands),
+            result["rendered"],
+        )
 
     def test_nxos_acls_parsed(self):
         set_module_args(
@@ -470,22 +475,33 @@ class TestNxosAclsModule(TestNxosModule):
         self.assertEqual(result["parsed"], compare_list, result["parsed"])
 
     def test_nxos_acls_gathered(self):
+        self.execute_show_command.return_value = dedent(
+            """\
+            ip access-list ACL1v4
+                10 permit ip any any
+                20 deny udp any any
+            ip access-list ComplicatedAcl
+                10 permit tcp any range 1024 65500 192.168.0.0 0.0.0.255 eq 1700
+            ipv6 access-list ACL1v6
+                10 permit sctp any any
+            """,
+        )
         set_module_args(dict(config=[], state="gathered"))
         result = self.execute_module(changed=False)
         compare_list = [
             {
                 "acls": [
                     {
+                        "name": "ACL1v6",
                         "aces": [
                             {
-                                "destination": {"any": True},
                                 "sequence": 10,
+                                "grant": "permit",
                                 "protocol": "sctp",
                                 "source": {"any": True},
-                                "grant": "permit",
+                                "destination": {"any": True},
                             },
                         ],
-                        "name": "ACL1v6",
                     },
                 ],
                 "afi": "ipv6",
@@ -493,23 +509,42 @@ class TestNxosAclsModule(TestNxosModule):
             {
                 "acls": [
                     {
+                        "name": "ACL1v4",
                         "aces": [
                             {
-                                "destination": {"any": True},
                                 "sequence": 10,
+                                "grant": "permit",
                                 "protocol": "ip",
                                 "source": {"any": True},
-                                "grant": "permit",
+                                "destination": {"any": True},
                             },
                             {
-                                "destination": {"any": True},
                                 "sequence": 20,
+                                "grant": "deny",
                                 "protocol": "udp",
                                 "source": {"any": True},
-                                "grant": "deny",
+                                "destination": {"any": True},
                             },
                         ],
-                        "name": "ACL1v4",
+                    },
+                    {
+                        "name": "ComplicatedAcl",
+                        "aces": [
+                            {
+                                "sequence": 10,
+                                "grant": "permit",
+                                "protocol": "tcp",
+                                "source": {
+                                    "any": True,
+                                    "port_protocol": {"range": {"start": "1024", "end": "65500"}},
+                                },
+                                "destination": {
+                                    "address": "192.168.0.0",
+                                    "wildcard_bits": "0.0.0.255",
+                                    "port_protocol": {"eq": "1700"},
+                                },
+                            },
+                        ],
                     },
                 ],
                 "afi": "ipv4",
@@ -632,12 +667,21 @@ class TestNxosAclsModule(TestNxosModule):
             """\
               ip access-list TEST_RESEQUENCE
                 10 permit ip 10.0.0.0/24 any
-                20 deny udp any any eq domain
+                11 permit tcp 1.1.1.1/32 range 7111 9111 192.168.0.0/24 established
+                20 deny tcp any eq ftp-data any eq domain
+                25 permit icmp any any echo-reply
+                27 permit icmp any any port-unreachable
                 30 remark for resetting to default run resequence ip access-list TEST_RESEQUENCE 2 3
               ipv6 access-list TEST_RESEQUENCE_ipv6
                 10 permit udp any any
                 20 deny tcp any any
                 30 remark for resetting to default run resequence ip access-list TEST_RESEQUENCE_ipv6 2 3
+              ipv6 access-list TEST_PREFIX_HOST
+                10 permit ipv6 fd00:976a::/32 any
+                20 permit ipv6 2001:db8:85a3::8a2e:370:7334/128 any
+              ipv6 access-list TEST_ICMPv6
+                10 permit icmp any any nd-na
+                20 deny icmp any any nd-ns telemetry_path
             """,
         )
         set_module_args(dict(state="gathered"))
@@ -668,6 +712,55 @@ class TestNxosAclsModule(TestNxosModule):
                             },
                         ],
                     },
+                    {
+                        "name": "TEST_PREFIX_HOST",
+                        "aces": [
+                            {
+                                "sequence": 10,
+                                "grant": "permit",
+                                "protocol": "ipv6",
+                                "source": {"prefix": "fd00:976a::/32"},
+                                "destination": {"any": True},
+                            },
+                            {
+                                "sequence": 20,
+                                "grant": "permit",
+                                "protocol": "ipv6",
+                                "source": {"host": "2001:db8:85a3::8a2e:370:7334"},
+                                "destination": {"any": True},
+                            },
+                        ],
+                    },
+                    {
+                        "name": "TEST_ICMPv6",
+                        "aces": [
+                            {
+                                "sequence": 10,
+                                "grant": "permit",
+                                "protocol": "icmpv6",
+                                "protocol_options": {
+                                    "icmpv6": {
+                                        "nd_na": True,
+                                    },
+                                },
+                                "source": {"any": True},
+                                "destination": {"any": True},
+                            },
+                            {
+                                "sequence": 20,
+                                "grant": "deny",
+                                "protocol": "icmpv6",
+                                "protocol_options": {
+                                    "icmpv6": {
+                                        "nd_ns": True,
+                                        "telemetry_path": True,
+                                    },
+                                },
+                                "source": {"any": True},
+                                "destination": {"any": True},
+                            },
+                        ],
+                    },
                 ],
                 "afi": "ipv6",
             },
@@ -684,18 +777,210 @@ class TestNxosAclsModule(TestNxosModule):
                                 "destination": {"any": True},
                             },
                             {
+                                "sequence": 11,
+                                "grant": "permit",
+                                "protocol": "tcp",
+                                "protocol_options": {"tcp": {"established": True}},
+                                "source": {
+                                    "host": "1.1.1.1",
+                                    "port_protocol": {
+                                        "range": {"end": "9111", "start": "7111"},
+                                    },
+                                },
+                                "destination": {"prefix": "192.168.0.0/24"},
+                            },
+                            {
                                 "sequence": 20,
                                 "grant": "deny",
-                                "protocol": "udp",
-                                "source": {"any": True},
+                                "protocol": "tcp",
+                                "source": {
+                                    "any": True,
+                                    "port_protocol": {"eq": "ftp-data"},
+                                },
                                 "destination": {
                                     "any": True,
                                     "port_protocol": {"eq": "domain"},
                                 },
                             },
                             {
+                                "sequence": 25,
+                                "grant": "permit",
+                                "protocol": "icmp",
+                                "protocol_options": {
+                                    "icmp": {
+                                        "echo_reply": True,
+                                    },
+                                },
+                                "source": {
+                                    "any": True,
+                                },
+                                "destination": {
+                                    "any": True,
+                                },
+                            },
+                            {
+                                "sequence": 27,
+                                "grant": "permit",
+                                "protocol": "icmp",
+                                "protocol_options": {
+                                    "icmp": {
+                                        "port_unreachable": True,
+                                    },
+                                },
+                                "source": {
+                                    "any": True,
+                                },
+                                "destination": {
+                                    "any": True,
+                                },
+                            },
+                            {
                                 "sequence": 30,
                                 "remark": "for resetting to default run resequence ip access-list TEST_RESEQUENCE 2 3",
+                            },
+                        ],
+                    },
+                ],
+                "afi": "ipv4",
+            },
+        ]
+        result = self.execute_module(changed=False)
+        self.assertEqual(result["gathered"], gathered)
+
+    def test_nxos_acls_icmpv6_1(self):
+        self.execute_show_command.return_value = dedent(
+            """\
+              ipv6 access-list TEST_ICMPv6
+                20 deny icmp any any nd-ns telemetry_path
+            """,
+        )
+        set_module_args(
+            dict(
+                config=[
+                    dict(
+                        afi="ipv6",
+                        acls=[
+                            dict(
+                                name="TEST_ICMPv6",
+                                aces=[
+                                    dict(
+                                        grant="permit",
+                                        destination=dict(any=True),
+                                        source=dict(host="192.0.2.1"),
+                                        sequence=10,
+                                        protocol="icmpv6",
+                                        protocol_options=dict(
+                                            icmpv6=dict(
+                                                nd_na=True,
+                                            ),
+                                        ),
+                                    ),
+                                    dict(
+                                        grant="deny",
+                                        destination=dict(any=True),
+                                        source=dict(any=True),
+                                        sequence=20,
+                                        protocol="icmpv6",
+                                        protocol_options=dict(
+                                            icmpv6=dict(
+                                                nd_ns=True,
+                                                telemetry_path=True,
+                                            ),
+                                        ),
+                                    ),
+                                ],
+                            ),
+                        ],
+                    ),
+                ],
+                state="merged",
+            ),
+        )
+
+        commands = [
+            "ipv6 access-list TEST_ICMPv6",
+            "10 permit icmp host 192.0.2.1 any nd-na",
+        ]
+        result = self.execute_module(changed=True)
+        self.assertEqual(result["commands"], commands)
+
+    def test_nxos_acls_ranges(self):
+        self.execute_show_command.return_value = dedent(
+            """\
+              ip access-list acl1
+                10 permit tcp any any range ftp-data ftp
+                20 permit tcp any range ftp-data ftp any range telnet time
+                30 permit tcp any range ftp-data ftp any
+            """,
+        )
+        set_module_args(
+            dict(
+                state="gathered",
+            ),
+        )
+
+        gathered = [
+            {
+                "acls": [
+                    {
+                        "name": "acl1",
+                        "aces": [
+                            {
+                                "sequence": 10,
+                                "grant": "permit",
+                                "protocol": "tcp",
+                                "source": {
+                                    "any": True,
+                                },
+                                "destination": {
+                                    "any": True,
+                                    "port_protocol": {
+                                        "range": {
+                                            "start": "ftp-data",
+                                            "end": "ftp",
+                                        },
+                                    },
+                                },
+                            },
+                            {
+                                "sequence": 20,
+                                "grant": "permit",
+                                "protocol": "tcp",
+                                "source": {
+                                    "any": True,
+                                    "port_protocol": {
+                                        "range": {
+                                            "start": "ftp-data",
+                                            "end": "ftp",
+                                        },
+                                    },
+                                },
+                                "destination": {
+                                    "any": True,
+                                    "port_protocol": {
+                                        "range": {
+                                            "start": "telnet",
+                                            "end": "time",
+                                        },
+                                    },
+                                },
+                            },
+                            {
+                                "sequence": 30,
+                                "grant": "permit",
+                                "protocol": "tcp",
+                                "source": {
+                                    "any": True,
+                                    "port_protocol": {
+                                        "range": {
+                                            "start": "ftp-data",
+                                            "end": "ftp",
+                                        },
+                                    },
+                                },
+                                "destination": {
+                                    "any": True,
+                                },
                             },
                         ],
                     },

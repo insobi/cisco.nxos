@@ -89,8 +89,8 @@ EXAMPLES = """
     vni: 6000
     route_distinguisher: 60:10
     route_target_import:
-    - 5000:10
-    - 4100:100
+      - "5000:10"
+      - "4100:100"
     route_target_export: auto
     route_target_both: default
 """
@@ -113,7 +113,6 @@ from ansible_collections.ansible.netcommon.plugins.module_utils.network.common.c
 from ansible_collections.cisco.nxos.plugins.module_utils.network.nxos.nxos import (
     get_config,
     load_config,
-    nxos_argument_spec,
 )
 
 
@@ -216,7 +215,9 @@ def state_present(module, existing, proposed):
                 if target == "default":
                     continue
                 if existing:
-                    if target not in existing.get(key.replace("-", "_").replace(" ", "_")):
+                    if target not in existing.get(
+                        key.replace("-", "_").replace(" ", "_"),
+                    ):
                         commands.append("{0} {1}".format(key, target))
                 else:
                     commands.append("{0} {1}".format(key, target))
@@ -255,8 +256,6 @@ def main():
         route_target_export=dict(required=False, type="list", elements="str"),
         state=dict(choices=["present", "absent"], default="present", required=False),
     )
-
-    argument_spec.update(nxos_argument_spec)
 
     module = AnsibleModule(argument_spec=argument_spec, supports_check_mode=True)
 

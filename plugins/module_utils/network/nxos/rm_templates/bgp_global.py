@@ -17,7 +17,7 @@ the given network resource.
 
 import re
 
-from ansible_collections.ansible.netcommon.plugins.module_utils.network.common.network_template import (
+from ansible_collections.ansible.netcommon.plugins.module_utils.network.common.rm_base.network_template import (
     NetworkTemplate,
 )
 
@@ -634,15 +634,20 @@ class Bgp_globalTemplate(NetworkTemplate):
             "getval": re.compile(
                 r"""
                 \s+neighbor\s(?P<neighbor_address>\S+)
+                (\sremote-as\sroute-map\s(?P<remote_as_route_map>\S+))?
+                (\sremote-as\s(?P<remote_as>\S+))?
                 $""", re.VERBOSE,
             ),
-            "setval": "neighbor {{ neighbor_address }}",
+            "setval": "neighbor {{ neighbor_address }}"
+                      "{{ (' remote-as route-map ' + remote_as_route_map) if remote_as_route_map|d(None) else '' }}",
             "result": {
                 "vrfs": {
                     '{{ "vrf_" + vrf|d() }}': {
                         "neighbors": {
                             "{{ neighbor_address }}": {
                                 "neighbor_address": "{{ neighbor_address }}",
+                                "remote_as": "{{ remote_as }}",
+                                "remote_as_route_map": "{{ remote_as_route_map }}",
                             },
                         },
                     },
@@ -806,6 +811,7 @@ class Bgp_globalTemplate(NetworkTemplate):
             "getval": re.compile(
                 r"""
                 \s+neighbor\s(?P<neighbor_address>\S+)
+                (\sremote-as\sroute-map\s\S+)?
                 \sdescription\s(?P<description>\S+)
                 $""", re.VERBOSE,
             ),

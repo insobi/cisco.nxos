@@ -23,7 +23,6 @@ from copy import deepcopy
 from ansible_collections.ansible.netcommon.plugins.module_utils.network.common import utils
 from ansible_collections.ansible.netcommon.plugins.module_utils.network.common.utils import (
     parse_conf_arg,
-    parse_conf_cmd_arg,
 )
 
 from ansible_collections.cisco.nxos.plugins.module_utils.network.nxos.argspec.vlans.vlans import (
@@ -167,7 +166,7 @@ class VlansFacts(object):
             #   "vlanshowinfo-vlanmode": "ce-vlan"}}
             mtuinfo = structured["TABLE_mtuinfo"]["ROW_mtuinfo"]
 
-        if type(vlanbrief) is not list:
+        if not isinstance(vlanbrief, list):
             # vlanbrief is not a list when only one vlan is found.
             vlanbrief = [vlanbrief]
             mtuinfo = [mtuinfo]

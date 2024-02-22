@@ -92,7 +92,6 @@ from ansible_collections.ansible.netcommon.plugins.module_utils.network.common.c
 from ansible_collections.cisco.nxos.plugins.module_utils.network.nxos.nxos import (
     get_config,
     load_config,
-    nxos_argument_spec,
 )
 
 
@@ -103,7 +102,6 @@ def get_existing(module, args, gl):
 
     pim_address_re = r"ip pim rp-address (?P<value>.*)$"
     for line in re.findall(pim_address_re, config, re.M):
-
         values = line.split()
         if values[0] != address:
             continue
@@ -191,7 +189,6 @@ def main():
         bidir=dict(required=False, type="bool"),
         state=dict(choices=["present", "absent"], default="present", required=False),
     )
-    argument_spec.update(nxos_argument_spec)
 
     module = AnsibleModule(
         argument_spec=argument_spec,

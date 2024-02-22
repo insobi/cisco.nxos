@@ -174,7 +174,6 @@ from ansible_collections.cisco.nxos.plugins.module_utils.network.nxos.nxos impor
     get_config,
     get_interface_type,
     load_config,
-    nxos_argument_spec,
     run_commands,
 )
 
@@ -424,7 +423,6 @@ def config_pim_interface(delta, existing, jp_bidir, isauth):
 
 
 def get_pim_interface_defaults():
-
     args = dict(
         dr_prio=PARAM_TO_DEFAULT_KEYMAP.get("dr_prio"),
         bfd=PARAM_TO_DEFAULT_KEYMAP.get("bfd"),
@@ -532,7 +530,6 @@ def main():
             choices=["absent", "default", "present"],
         ),
     )
-    argument_spec.update(nxos_argument_spec)
 
     required_by = {"hello_interval_ms": "hello_interval"}
     module = AnsibleModule(
