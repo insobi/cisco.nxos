@@ -4,6 +4,67 @@ Cisco Nxos Collection Release Notes
 
 .. contents:: Topics
 
+v9.0.0
+======
+
+Release Summary
+---------------
+
+Starting from this release, the minimum `ansible-core` version this collection requires is `2.15.0`. The last known version compatible with ansible-core<2.15 is v8.1.0.
+
+Major Changes
+-------------
+
+- Bumping `requires_ansible` to `>=2.15.0`, since previous ansible-core versions are EoL now.
+
+v8.1.0
+======
+
+Minor Changes
+-------------
+
+- route_maps - support simple route-maps that do not contain set or match statements. it allows for the creation and management of purely basic route-map entries like 'route-map test-1 permit 10'.
+
+Bugfixes
+--------
+
+- nxos_l3_interfaces - fail if encapsulation exists on a different sub-interface.
+- nxos_static_routes - correctly generate command when track parameter is specified.
+
+v8.0.0
+======
+
+Major Changes
+-------------
+
+- Updated the minimum required ansible.netcommon version to 6.1.0 to support the cli_restore module.
+
+Minor Changes
+-------------
+
+- Add support for cli_restore functionality.
+- Please refer the PR to know more about core changes (https://github.com/ansible-collections/ansible.netcommon/pull/618). The cli_restore module is a part of ansible.netcommon.
+
+Bugfixes
+--------
+
+- nxos_facts - correct parse JSON output when multiple interfaces have IPv6 address assigned (https://github.com/ansible-collections/cisco.nxos/issues/771).
+
+v7.0.0
+======
+
+Major Changes
+-------------
+
+- This release removes four previously deprecated modules from this collection. Please refer to the **Removed Features** section for details.
+
+Removed Features (previously deprecated)
+----------------------------------------
+
+- The nxos_logging module has been removed with this release.
+- The nxos_ntp module has been removed with this release.
+- The nxos_ntp_auth module has been removed with this release.
+- The nxos_ntp_options module has been removed with this release.
 
 v6.0.3
 ======

@@ -1062,3 +1062,58 @@ releases:
     fragments:
       - acls_gather_fix.yml
     release_date: "2024-02-14"
+  7.0.0:
+    changes:
+      major_changes:
+        - This release removes four previously deprecated modules from this collection.
+          Please refer to the **Removed Features** section for details.
+      removed_features:
+        - The nxos_logging module has been removed with this release.
+        - The nxos_ntp module has been removed with this release.
+        - The nxos_ntp_auth module has been removed with this release.
+        - The nxos_ntp_options module has been removed with this release.
+    fragments:
+      - major_700.yaml
+    release_date: "2024-03-27"
+  8.0.0:
+    changes:
+      bugfixes:
+        - nxos_facts - correct parse JSON output when multiple interfaces have IPv6
+          address assigned (https://github.com/ansible-collections/cisco.nxos/issues/771).
+      major_changes:
+        - Updated the minimum required ansible.netcommon version to 6.1.0 to support the cli_restore module.
+      minor_changes:
+        - Add support for cli_restore functionality.
+        - Please refer the PR to know more about core changes (https://github.com/ansible-collections/ansible.netcommon/pull/618).
+          The cli_restore module is a part of ansible.netcommon.
+    fragments:
+      - add_restore_support.yaml
+      - fix_771.yaml
+      - trivial.yaml
+    release_date: "2024-04-19"
+  8.1.0:
+    changes:
+      bugfixes:
+        - nxos_l3_interfaces - fail if encapsulation exists on a different sub-interface.
+        - nxos_static_routes - correctly generate command when track parameter is specified.
+      minor_changes:
+        - route_maps - support simple route-maps that do not contain set or match statements.
+          it allows for the creation and management of purely basic route-map entries
+          like 'route-map test-1 permit 10'.
+    fragments:
+      - ana_442.yaml
+      - nxos_l3_interfaces.yaml
+      - route_maps.yaml
+    release_date: "2024-05-22"
+  9.0.0:
+    changes:
+      major_changes:
+        - Bumping `requires_ansible` to `>=2.15.0`, since previous ansible-core versions
+          are EoL now.
+      release_summary:
+        Starting from this release, the minimum `ansible-core` version
+        this collection requires is `2.15.0`. The last known version compatible with
+        ansible-core<2.15 is v8.1.0.
+    fragments:
+      - bump_215.yaml
+    release_date: "2024-06-07"
